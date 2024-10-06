@@ -8,6 +8,7 @@ import type { Prisma } from "@prisma/client";
 import { emailAddressSchema } from "@/lib/types";
 import { FREE_CREDITS_PER_DAY } from "@/app/constants";
 
+// 验证账户访问权限
 export const authoriseAccountAccess = async (accountId: string, userId: string) => {
     const account = await db.account.findFirst({
         where: {
@@ -22,22 +23,27 @@ export const authoriseAccountAccess = async (accountId: string, userId: string) 
     return account
 }
 
+// 获取收件箱过滤条件
 const inboxFilter = (accountId: string): Prisma.ThreadWhereInput => ({
     accountId,
     inboxStatus: true
 })
 
+// 获取已发送邮件过滤条件
 const sentFilter = (accountId: string): Prisma.ThreadWhereInput => ({
     accountId,
     sentStatus: true
 })
 
+// 获取草稿过滤条件
 const draftFilter = (accountId: string): Prisma.ThreadWhereInput => ({
     accountId,
     draftStatus: true
 })
 
+// 创建邮件路由
 export const mailRouter = createTRPCRouter({
+    // 获取账户列表
     getAccounts: protectedProcedure.query(async ({ ctx }) => {
         return await ctx.db.account.findMany({
             where: {
@@ -47,6 +53,7 @@ export const mailRouter = createTRPCRouter({
             }
         })
     }),
+    // 获取邮件数量
     getNumThreads: protectedProcedure.input(z.object({
         accountId: z.string(),
         tab: z.string()
@@ -64,6 +71,7 @@ export const mailRouter = createTRPCRouter({
             where: filter
         })
     }),
+    // 获取邮件列表
     getThreads: protectedProcedure.input(z.object({
         accountId: z.string(),
         tab: z.string(),
@@ -111,6 +119,7 @@ export const mailRouter = createTRPCRouter({
         return threads
     }),
 
+    // 获取邮件详情
     getThreadById: protectedProcedure.input(z.object({
         accountId: z.string(),
         threadId: z.string()
@@ -138,6 +147,7 @@ export const mailRouter = createTRPCRouter({
         })
     }),
 
+    // 获取回复详情
     getReplyDetails: protectedProcedure.input(z.object({
         accountId: z.string(),
         threadId: z.string(),
@@ -198,6 +208,7 @@ export const mailRouter = createTRPCRouter({
         }
     }),
 
+    // 同步邮件
     syncEmails: protectedProcedure.input(z.object({
         accountId: z.string()
     })).mutation(async ({ ctx, input }) => {
@@ -206,6 +217,7 @@ export const mailRouter = createTRPCRouter({
         const acc = new Account(account.token)
         acc.syncEmails()
     }),
+    // 设置未完成
     setUndone: protectedProcedure.input(z.object({
         threadId: z.string().optional(),
         threadIds: z.array(z.string()).optional(),
@@ -236,6 +248,7 @@ export const mailRouter = createTRPCRouter({
             })
         }
     }),
+    // 设置已完成
     setDone: protectedProcedure.input(z.object({
         threadId: z.string().optional(),
         threadIds: z.array(z.string()).optional(),
@@ -267,6 +280,7 @@ export const mailRouter = createTRPCRouter({
             })
         }
     }),
+    // 获取邮件详情
     getEmailDetails: protectedProcedure.input(z.object({
         emailId: z.string(),
         accountId: z.string()
@@ -274,6 +288,7 @@ export const mailRouter = createTRPCRouter({
         const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId)
         return await getEmailDetails(account.token, input.emailId)
     }),
+    // 发送邮件
     sendEmail: protectedProcedure.input(z.object({
         accountId: z.string(),
         body: z.string(),
@@ -301,6 +316,7 @@ export const mailRouter = createTRPCRouter({
             inReplyTo: input.inReplyTo,
         })
     }),
+    // 获取邮件建议
     getEmailSuggestions: protectedProcedure.input(z.object({
         accountId: z.string(),
         query: z.string(),
@@ -331,12 +347,14 @@ export const mailRouter = createTRPCRouter({
             take: 10,
         })
     }),
+    // 获取我的账户
     getMyAccount: protectedProcedure.input(z.object({
         accountId: z.string()
     })).query(async ({ ctx, input }) => {
         const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId)
         return account
     }),
+    // 获取聊天机器人交互
     getChatbotInteraction: protectedProcedure.query(async ({ ctx }) => {
         const chatbotInteraction = await ctx.db.chatbotInteraction.findUnique({
             where: {

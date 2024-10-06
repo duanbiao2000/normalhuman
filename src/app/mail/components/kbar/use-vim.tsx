@@ -13,18 +13,27 @@ import useRefetch from "@/hooks/use-refetch"
 import useThreads from "../../use-threads"
 import { isSearchingAtom } from "../search-bar"
 
+// 定义visualModeAtom和visualModeStartIdAtom
 export const visualModeAtom = atom(false)
 export const visualModeStartIdAtom = atom<string | null>(null)
 
+// 定义useVim函数
 const useVim = () => {
 
+    // 获取queryClient
     const queryClient = useQueryClient()
+    // 获取当前线程id和设置线程id的函数
     const [threadId, setThreadId] = useThread()
+    // 获取accountId
     const [accountId] = useLocalStorage('accountId', '')
+    // 获取tab
     const [tab] = useLocalStorage('normalhuman-tab', 'inbox')
+    // 获取done
     const [done] = useLocalStorage('normalhuman-done', false)
+    // 获取threads数据
     const { threads: data, queryKey, refetch } = useThreads()
 
+    // 定义setUndone函数，用于将线程标记为未完成
     const setUndone = api.mail.setUndone.useMutation({
         onMutate: async (payload) => {
             if (!payload.threadId && !payload.threadIds) return
@@ -59,6 +68,7 @@ const useVim = () => {
         }
     })
 
+    // 定义setDone函数，用于将线程标记为已完成
     const setDone = api.mail.setDone.useMutation({
         onMutate: async (payload) => {
             if (done) return
@@ -93,9 +103,12 @@ const useVim = () => {
         }
     })
 
+    // 获取visualMode和设置visualMode的函数
     const [visualMode, setVisualMode] = useAtom(visualModeAtom)
+    // 获取visualModeStartId和设置visualModeStartId的函数
     const [visualModeStartId, setVisualModeStartId] = useAtom(visualModeStartIdAtom)
 
+    // 计算选中的线程id
     const selectedThreadIds = useMemo(() => {
         if (!visualMode || !visualModeStartId || !threadId || !data) return []
 
@@ -110,12 +123,15 @@ const useVim = () => {
         return data.slice(start, end + 1).map(t => t.id)
     }, [visualMode, visualModeStartId, threadId, data])
 
+    // 定义numberRef，用于存储选中的线程数量
     const numberRef = React.useRef(0)
 
+    // 监听selectedThreadIds的变化，更新numberRef的值
     React.useEffect(() => {
         numberRef.current = selectedThreadIds.length
     }, [selectedThreadIds])
 
+    // 监听visualMode和selectedThreadIds的变化，显示或隐藏toast
     React.useEffect(() => {
         if (visualMode) {
             toast.info(`${numberRef.current} thread${numberRef.current !== 1 ? 's' : ''} selected`, {
@@ -128,7 +144,7 @@ const useVim = () => {
         }
     }, [visualMode, selectedThreadIds]);
 
-
+    // 监听threadId的变化，将当前线程滚动到视图中
     React.useEffect(() => {
         if (!threadId) return
         // move thread it into view 
@@ -139,6 +155,7 @@ const useVim = () => {
     }, [threadId])
 
 
+    // 定义isInputElement函数，用于判断当前元素是否为输入元素
     const isInputElement = (element: Element | null): boolean => {
         return !!(element instanceof HTMLInputElement ||
             element instanceof HTMLTextAreaElement ||
@@ -146,6 +163,7 @@ const useVim = () => {
             element?.hasAttribute('contenteditable'));
     };
 
+    // 定义handler函数，用于处理键盘事件
     let handler = (event: KeyboardEvent) => {
         if (isInputElement(document.activeElement)) {
             return;
@@ -224,6 +242,7 @@ const useVim = () => {
         })(event);
     };
 
+    // 监听handler、threadId、data、visualMode和visualModeStartId的变化，添加或移除键盘事件监听
     React.useEffect(() => {
         if (typeof window == 'undefined') return
         window.addEventListener("keydown", handler)
@@ -232,7 +251,9 @@ const useVim = () => {
         }
     }, [handler, threadId, data, visualMode, visualModeStartId])
 
+    // 返回选中的线程id和visualMode
     return { selectedThreadIds, visualMode }
 }
 
+// 导出useVim函数
 export default useVim

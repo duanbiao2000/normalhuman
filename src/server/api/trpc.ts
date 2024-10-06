@@ -1,10 +1,9 @@
 /**
- * YOU PROBABLY DON'T NEED TO EDIT THIS FILE, UNLESS:
- * 1. You want to modify request context (see Part 1).
- * 2. You want to create a new middleware or type of procedure (see Part 3).
+ * 你可能不需要编辑这个文件，除非:
+ * 1. 你想修改请求上下文（参见第1部分）。
+ * 2. 你想创建一个新的中间件或过程类型（参见第3部分）。
  *
- * TL;DR - This is where all the tRPC server stuff is created and plugged in. The pieces you will
- * need to use are documented accordingly near the end.
+ * TL;DR - 这就是所有tRPC服务器内容创建和插入的地方。你需要使用的部分在相应位置进行了文档说明。
  */
 import { initTRPC } from "@trpc/server";
 import superjson from "superjson";
@@ -14,14 +13,13 @@ import { db } from "@/server/db";
 import { auth } from "@clerk/nextjs/server";
 
 /**
- * 1. CONTEXT
+ * 1. 上下文
  *
- * This section defines the "contexts" that are available in the backend API.
+ * 这部分定义了后端API中可用的"上下文"。
  *
- * These allow you to access things when processing a request, like the database, the session, etc.
+ * 这些允许你在处理请求时访问东西，如数据库、会话等。
  *
- * This helper generates the "internals" for a tRPC context. The API handler and RSC clients each
- * wrap this and provides the required context.
+ * 这个助手生成了tRPC上下文的"内部"部分。API处理程序和RSC客户端都会包装这个，并提供所需上下文。
  *
  * @see https://trpc.io/docs/server/context
  */
@@ -35,11 +33,9 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 };
 
 /**
- * 2. INITIALIZATION
+ * 2. 初始化
  *
- * This is where the tRPC API is initialized, connecting the context and transformer. We also parse
- * ZodErrors so that you get typesafety on the frontend if your procedure fails due to validation
- * errors on the backend.
+ * 这就是tRPC API初始化的地方，连接上下文和转换器。我们还解析ZodErrors，以便在后台验证失败时，前端可以获得类型安全性。
  */
 const t = initTRPC.context<typeof createTRPCContext>().create({
   transformer: superjson,
@@ -56,37 +52,35 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
 });
 
 /**
- * Create a server-side caller.
+ * 创建服务器端调用者。
  *
  * @see https://trpc.io/docs/server/server-side-calls
  */
 export const createCallerFactory = t.createCallerFactory;
 
 /**
- * 3. ROUTER & PROCEDURE (THE IMPORTANT BIT)
+ * 3. 路由 & 过程（重要的部分）
  *
- * These are the pieces you use to build your tRPC API. You should import these a lot in the
- * "/src/server/api/routers" directory.
+ * 这些是你用来构建tRPC API的部分。你应该在"/src/server/api/routers"目录中大量导入这些部分。
  */
 
 /**
- * This is how you create new routers and sub-routers in your tRPC API.
+ * 这是你如何在tRPC API中创建新的路由和子路由的方法。
  *
  * @see https://trpc.io/docs/router
  */
 export const createTRPCRouter = t.router;
 
 /**
- * Middleware for timing procedure execution and adding an artificial delay in development.
+ * 中间件，用于计时过程执行并在开发中添加人工延迟。
  *
- * You can remove this if you don't like it, but it can help catch unwanted waterfalls by simulating
- * network latency that would occur in production but not in local development.
+ * 如果你不喜欢这个，可以移除它，但它可以帮助捕获不需要的水流，通过模拟生产环境中会出现但在本地开发中不会出现的网络延迟。
  */
 const timingMiddleware = t.middleware(async ({ next, path }) => {
   const start = Date.now();
 
   if (t._config.isDev) {
-    // artificial delay in dev
+    // 开发中的人工延迟
     const waitMs = Math.floor(Math.random() * 400) + 100;
     await new Promise((resolve) => setTimeout(resolve, waitMs));
   }
@@ -107,11 +101,9 @@ const isAuth = t.middleware(({ next, ctx }) => {
 });
 
 /**
- * Public (unauthenticated) procedure
+ * 公共（未认证）过程
  *
- * This is the base piece you use to build new queries and mutations on your tRPC API. It does not
- * guarantee that a user querying is authorized, but you can still access user session data if they
- * are logged in.
+ * 这是你用来在tRPC API中构建新查询和变更的基础部分。它不能保证查询的用户被授权，但你仍然可以在他们登录时访问用户会话数据。
  */
 export const publicProcedure = t.procedure.use(timingMiddleware);
 export const protectedProcedure = t.procedure.use(isAuth);

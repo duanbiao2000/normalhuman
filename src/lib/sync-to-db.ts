@@ -6,21 +6,23 @@ import { OramaManager } from './orama';
 import { getEmbeddings } from './embeddings';
 import { turndown } from './turndown';
 
+// 异步函数，将电子邮件同步到数据库
 async function syncEmailsToDatabase(emails: EmailMessage[], accountId: string) {
-    console.log(`Syncing ${emails.length} emails to database`);
-    const limit = pLimit(10); // Process up to 10 emails concurrently
+    console.log(`Syncing ${emails.length} emails to database`); // 打印同步的电子邮件数量
+    const limit = pLimit(10); // 并发处理最多10封电子邮件
 
     const oramaClient = new OramaManager(accountId)
     oramaClient.initialize()
 
     try {
 
+        // 同步到Orama数据库
         async function syncToOrama() {
             await Promise.all(emails.map(email => {
                 return limit(async () => {
-                    const body = turndown.turndown(email.body ?? email.bodySnippet ?? '')
-                    const payload = `From: ${email.from.name} <${email.from.address}>\nTo: ${email.to.map(t => `${t.name} <${t.address}>`).join(', ')}\nSubject: ${email.subject}\nBody: ${body}\n SentAt: ${new Date(email.sentAt).toLocaleString()}`
-                    const bodyEmbedding = await getEmbeddings(payload);
+                    const body = turndown.turndown(email.body ?? email.bodySnippet ?? '') // 将电子邮件正文转换为纯文本
+                    const payload = `From: ${email.from.name} <${email.from.address}>\nTo: ${email.to.map(t => `${t.name} <${t.address}>`).join(', ')}\nSubject: ${email.subject}\nBody: ${body}\n SentAt: ${new Date(email.sentAt).toLocaleString()}` // 构建payload
+                    const bodyEmbedding = await getEmbeddings(payload); // 获取payload的嵌入
                     await oramaClient.insert({
                         title: email.subject,
                         body: body,
@@ -30,20 +32,21 @@ async function syncEmailsToDatabase(emails: EmailMessage[], accountId: string) {
                         sentAt: new Date(email.sentAt).toLocaleString(),
                         embeddings: bodyEmbedding,
                         threadId: email.threadId
-                    })
+                    }) // 插入数据到Orama数据库
                 })
             }))
         }
 
+        // 同步到数据库
         async function syncToDB() {
             for (const [index, email] of emails.entries()) {
                 await upsertEmail(email, index, accountId);
             }
         }
 
-        await Promise.all([syncToOrama(), syncToDB()])
+        await Promise.all([syncToOrama(), syncToDB()]) // 并发执行同步到Orama数据库和数据库的操作
 
-        await oramaClient.saveIndex()
+        await oramaClient.saveIndex() // 保存索引
     } catch (error) {
         console.log('error', error)
     }

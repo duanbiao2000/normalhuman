@@ -11,16 +11,19 @@
 
 DB_CONTAINER_NAME="normalhuman-postgres"
 
+# Check if docker is installed
 if ! [ -x "$(command -v docker)" ]; then
   echo -e "Docker is not installed. Please install docker and try again.\nDocker install guide: https://docs.docker.com/engine/install/"
   exit 1
 fi
 
+# Check if the database container is already running
 if [ "$(docker ps -q -f name=$DB_CONTAINER_NAME)" ]; then
   echo "Database container '$DB_CONTAINER_NAME' already running"
   exit 0
 fi
 
+# Check if the database container is already stopped
 if [ "$(docker ps -q -a -f name=$DB_CONTAINER_NAME)" ]; then
   docker start "$DB_CONTAINER_NAME"
   echo "Existing database container '$DB_CONTAINER_NAME' started"
@@ -31,9 +34,12 @@ fi
 set -a
 source .env
 
+# Extract the database password from the DATABASE_URL
 DB_PASSWORD=$(echo "$DATABASE_URL" | awk -F':' '{print $3}' | awk -F'@' '{print $1}')
+# Extract the database port from the DATABASE_URL
 DB_PORT=$(echo "$DATABASE_URL" | awk -F':' '{print $4}' | awk -F'\/' '{print $1}')
 
+# Check if the default password is being used
 if [ "$DB_PASSWORD" = "password" ]; then
   echo "You are using the default database password"
   read -p "Should we generate a random password for you? [y/N]: " -r REPLY
@@ -43,9 +49,11 @@ if [ "$DB_PASSWORD" = "password" ]; then
   fi
   # Generate a random URL-safe password
   DB_PASSWORD=$(openssl rand -base64 12 | tr '+/' '-_')
+  # Replace the default password in the .env file with the new password
   sed -i -e "s#:password@#:$DB_PASSWORD@#" .env
 fi
 
+# Run the docker container
 docker run -d \
   --name $DB_CONTAINER_NAME \
   -e POSTGRES_USER="postgres" \

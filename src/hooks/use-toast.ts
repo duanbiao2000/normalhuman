@@ -1,6 +1,6 @@
 "use client"
 
-// Inspired by react-hot-toast library
+// 受react-hot-toast库启发
 import * as React from "react"
 
 import type {
@@ -27,6 +27,7 @@ const actionTypes = {
 
 let count = 0
 
+// 生成唯一id
 function genId() {
   count = (count + 1) % Number.MAX_SAFE_INTEGER
   return count.toString()
@@ -34,6 +35,7 @@ function genId() {
 
 type ActionType = typeof actionTypes
 
+// 定义action类型
 type Action =
   | {
       type: ActionType["ADD_TOAST"]
@@ -52,12 +54,14 @@ type Action =
       toastId?: ToasterToast["id"]
     }
 
+// 定义state类型
 interface State {
   toasts: ToasterToast[]
 }
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
+// 将toast添加到移除队列
 const addToRemoveQueue = (toastId: string) => {
   if (toastTimeouts.has(toastId)) {
     return
@@ -74,6 +78,7 @@ const addToRemoveQueue = (toastId: string) => {
   toastTimeouts.set(toastId, timeout)
 }
 
+// 定义reducer函数
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
@@ -133,6 +138,7 @@ const listeners: Array<(state: State) => void> = []
 
 let memoryState: State = { toasts: [] }
 
+// 定义dispatch函数
 function dispatch(action: Action) {
   memoryState = reducer(memoryState, action)
   listeners.forEach((listener) => {
@@ -142,6 +148,7 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
+// 定义toast函数
 function toast({ ...props }: Toast) {
   const id = genId()
 
@@ -171,19 +178,34 @@ function toast({ ...props }: Toast) {
   }
 }
 
+// 定义useToast函数
+/**
+ * 使用Toast通知的自定义钩子
+ * 
+ * 此钩子管理Toast通知的状态和行为初始化时，它会将当前的memoryState作为初始状态
+ * 并设置一个监听器来跟踪状态变化当组件卸载时，会移除监听器以防止内存泄漏
+ * 
+ * @returns 返回一个对象，包含当前的状态、toast方法和dismiss方法
+ */
 function useToast() {
+  // 初始化状态，使用memoryState作为初始值
   const [state, setState] = React.useState<State>(memoryState)
 
+  // 使用useEffect来添加和移除状态监听器
   React.useEffect(() => {
+    // 将setState推入监听器数组，以便在状态变化时通知所有监听器
     listeners.push(setState)
+    // 返回一个清理函数，当组件卸载时执行
     return () => {
+      // 找到监听器数组中setState的位置，并移除它
       const index = listeners.indexOf(setState)
       if (index > -1) {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+  }, [state]) // 当state变化时，执行useEffect
 
+  // 返回包含状态、toast方法和dismiss方法的对象
   return {
     ...state,
     toast,

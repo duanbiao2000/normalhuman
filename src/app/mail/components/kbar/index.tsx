@@ -19,12 +19,18 @@ import { isSearchingAtom } from "../search-bar";
 import { useThread } from "../../use-thread";
 
 
+// 导出一个默认函数KBar，接收一个参数children，类型为React.ReactNode
 export default function KBar({ children }: { children: React.ReactNode }) {
+    // 使用jotai库中的useAtom函数获取isSearchingAtom的值，并设置setIsSearching函数
     const [isSearching, setIsSearching] = useAtom(isSearchingAtom)
+    // 使用usehooks-ts库中的useLocalStorage函数获取normalhuman-tab的值，并设置setTab函数
     const [_, setTab] = useLocalStorage(`normalhuman-tab`, 'inbox')
+    // 使用自定义的useThread函数获取threadId的值，并设置setThreadId函数
     const [threadId, setThreadId] = useThread()
+    // 使用usehooks-ts库中的useLocalStorage函数获取normalhuman-done的值，并设置setDone函数
     const [done, setDone] = useLocalStorage('normalhuman-done', false)
 
+    // 定义一个actions数组，包含多个Action对象
     const actions: Action[] = [
         {
             id: "inboxAction",
@@ -71,19 +77,27 @@ export default function KBar({ children }: { children: React.ReactNode }) {
                 setDone(true)
             },
         },
-        {
-            id: "doneAction",
-            name: "See Pending",
-            shortcut: ['g', "u"],
-            keywords: 'pending, undone, not done',
-            section: "Navigation",
-            subtitle: "View the pending emails",
-            perform: () => {
-                setDone(false)
-            },
-        },
-
+      {
+    // 标识该操作的唯一ID
+    id: "doneAction",
+    // 操作的名称
+    name: "See Pending",
+    // 快捷键，用于快速触发该操作
+    shortcut: ['g', "u"],
+    // 操作相关的关键词，用于搜索或触发建议
+    keywords: 'pending, undone, not done',
+    // 操作所属的类别
+    section: "Navigation",
+    // 操作的子标题，提供额外的信息
+    subtitle: "View the pending emails",
+    // 执行该操作的函数
+    perform: () => {
+        // 将所有邮件标记为未读
+        setDone(false)
+    },
+}
     ];
+    // 返回一个KBarProvider组件，包含actions和children
     return (
         <KBarProvider actions={actions}>
             <ActualComponent>
@@ -92,12 +106,16 @@ export default function KBar({ children }: { children: React.ReactNode }) {
         </KBarProvider>
     )
 }
-const ActualComponent = ({ children }: { children: React.ReactNode }) => {
+// 定义一个ActualComponent组件，接收一个参数children，类型为React.ReactNode
+const ActualComponent = ({ children }: { children: React.ReactNode }) {
 
+    // 使用自定义的useAccountSwitching函数
     useAccountSwitching()
+    // 使用自定义的useThemeSwitching函数
     useThemeSwitching()
 
 
+    // 返回一个包含KBarPortal、KBarPositioner、KBarAnimator、KBarSearch和RenderResults组件的组件
     return (
         <>
             <KBarPortal>
